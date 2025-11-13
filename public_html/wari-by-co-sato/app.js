@@ -30,6 +30,23 @@ function showMessage(text, type = 'info') {
     }, 3500);
 }
 
+function getBasePath() {
+    const { pathname } = window.location;
+    if (pathname.endsWith('/')) {
+        return pathname;
+    }
+
+    const lastSegment = pathname.substring(pathname.lastIndexOf('/') + 1);
+    const hasExtension = lastSegment.includes('.');
+
+    if (hasExtension) {
+        const trimmed = pathname.replace(/[^/]*$/, '');
+        return trimmed === '' ? '/' : trimmed;
+    }
+
+    return `${pathname}/`;
+}
+
 function formatCurrency(amount) {
     return Number(amount).toLocaleString('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 });
 }
@@ -234,7 +251,8 @@ async function loadGroup(code) {
         updateGroupInfo();
         updateMemberList();
         updateMemberSelects();
-        history.replaceState({}, '', `?code=${state.group.code}`);
+        const basePath = getBasePath();
+        history.replaceState({}, '', `${basePath}?code=${state.group.code}`);
         renderItems();
         showView('group');
         fetchItems();
@@ -244,7 +262,7 @@ async function loadGroup(code) {
         state.group = null;
         state.members = [];
         state.items = [];
-        history.replaceState({}, '', '/');
+        history.replaceState({}, '', getBasePath());
         showView('home');
     }
 }
@@ -398,7 +416,7 @@ document.getElementById('back-home').addEventListener('click', () => {
     state.group = null;
     state.members = [];
     state.items = [];
-    history.replaceState({}, '', '/');
+    history.replaceState({}, '', getBasePath());
     showView('home');
 });
 
