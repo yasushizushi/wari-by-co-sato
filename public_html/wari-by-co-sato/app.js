@@ -30,6 +30,24 @@ function showMessage(text, type = 'info') {
     }, 3500);
 }
 
+function updateUrlCodeParam(code) {
+    const url = new URL(window.location.href);
+    if (code) {
+        url.searchParams.set('code', code);
+    } else {
+        url.searchParams.delete('code');
+    }
+
+    const relativeUrl = `${url.pathname}${url.search}${url.hash}`;
+    history.replaceState({}, '', relativeUrl || '/');
+}
+
+function buildGroupUrl(code) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('code', code);
+    return url.toString();
+}
+
 function formatCurrency(amount) {
     return Number(amount).toLocaleString('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 });
 }
@@ -234,7 +252,7 @@ async function loadGroup(code) {
         updateGroupInfo();
         updateMemberList();
         updateMemberSelects();
-        history.replaceState({}, '', `?code=${state.group.code}`);
+        updateUrlCodeParam(state.group.code);
         renderItems();
         showView('group');
         fetchItems();
@@ -244,7 +262,7 @@ async function loadGroup(code) {
         state.group = null;
         state.members = [];
         state.items = [];
-        history.replaceState({}, '', '/');
+        updateUrlCodeParam(null);
         showView('home');
     }
 }
@@ -398,13 +416,13 @@ document.getElementById('back-home').addEventListener('click', () => {
     state.group = null;
     state.members = [];
     state.items = [];
-    history.replaceState({}, '', '/');
+    updateUrlCodeParam(null);
     showView('home');
 });
 
 document.getElementById('share-link').addEventListener('click', async () => {
     if (!state.group) return;
-    const url = `${window.location.origin}${window.location.pathname}?code=${state.group.code}`;
+    const url = buildGroupUrl(state.group.code);
     if (navigator.clipboard && window.isSecureContext) {
         try {
             await navigator.clipboard.writeText(url);
