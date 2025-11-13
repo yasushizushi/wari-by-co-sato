@@ -208,7 +208,11 @@ function updateGroupInfo() {
     const title = document.getElementById('group-title');
     const codeEl = document.getElementById('group-code');
 
-    if (!state.group) return;
+    if (!state.group) {
+        title.textContent = '';
+        codeEl.textContent = '';
+        return;
+    }
 
     title.textContent = state.group.name;
     codeEl.textContent = `グループコード: ${state.group.code}`;
@@ -222,26 +226,50 @@ function setLoading(isLoading) {
     }
 }
 
-async function loadGroup(code) {
+function updateBrowserUrl(code) {
+    const url = new URL(window.location.href);
+    if (code) {
+        url.searchParams.set('code', code);
+    } else {
+        url.searchParams.delete('code');
+    }
+    const search = url.searchParams.toString();
+    const newPath = `${url.pathname}${search ? `?${search}` : ''}`;
+    history.replaceState({}, '', newPath);
+}
+
+function applyGroupData(group, members = [], items = []) {
+    state.group = group;
+    state.members = members;
+    state.items = items;
+    updateGroupInfo();
+    updateMemberList();
+    updateMemberSelects();
+    renderItems();
+    renderSettlement(null);
+}
+
+function resetGroupState() {
+    applyGroupData(null, [], []);
+    state.code = null;
+}
+
+async function loadGroup(code, { showLoading = true } = {}) {
     if (!code) return;
     state.code = code;
-    setLoading(true);
+    if (showLoading) {
+        setLoading(true);
+    }
     try {
         const data = await apiRequest(`api/groups.php?action=get_group&code=${encodeURIComponent(code)}`);
-        state.group = data.group;
-        state.members = data.members;
-        updateGroupInfo();
-        updateMemberList();
-        updateMemberSelects();
-        await fetchItems();
-        history.replaceState({}, '', `?code=${state.group.code}`);
+        applyGroupData(data.group, data.members, []);
+        updateBrowserUrl(state.group.code);
         showView('group');
+        fetchItems();
     } catch (error) {
         showMessage(error.message || 'グループを見つけられませんでした。', 'error');
-        state.group = null;
-        state.members = [];
-        state.items = [];
-        history.replaceState({}, '', '/');
+        resetGroupState();
+        updateBrowserUrl(null);
         showView('home');
     }
 }
@@ -283,10 +311,21 @@ document.getElementById('create-group-form').addEventListener('submit', async (e
             method: 'POST',
             body: JSON.stringify(formData)
         });
+        const group = {
+            id: data.id,
+            code: data.code,
+            name: data.name || formData.name
+        };
+        state.code = group.code;
+        applyGroupData(group, [], []);
+        updateBrowserUrl(group.code);
         showMessage('グループができました！メンバーを追加してね。');
-        await loadGroup(data.code);
+        showView('group');
+        await loadGroup(group.code, { showLoading: false });
     } catch (error) {
         showMessage(error.message, 'error');
+        resetGroupState();
+        updateBrowserUrl(null);
         showView('home');
     }
 });
@@ -392,10 +431,8 @@ document.getElementById('calculate-settlement').addEventListener('click', async 
 });
 
 document.getElementById('back-home').addEventListener('click', () => {
-    state.group = null;
-    state.members = [];
-    state.items = [];
-    history.replaceState({}, '', '/');
+    resetGroupState();
+    updateBrowserUrl(null);
     showView('home');
 });
 
