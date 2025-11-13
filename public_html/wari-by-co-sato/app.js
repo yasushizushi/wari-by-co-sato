@@ -230,14 +230,17 @@ async function loadGroup(code) {
         const data = await apiRequest(`api/groups.php?action=get_group&code=${encodeURIComponent(code)}`);
         state.group = data.group;
         state.members = data.members;
+        state.items = [];
         updateGroupInfo();
         updateMemberList();
         updateMemberSelects();
-        await fetchItems();
         history.replaceState({}, '', `?code=${state.group.code}`);
+        renderItems();
         showView('group');
+        fetchItems();
     } catch (error) {
         showMessage(error.message || 'グループを見つけられませんでした。', 'error');
+        state.code = null;
         state.group = null;
         state.members = [];
         state.items = [];
